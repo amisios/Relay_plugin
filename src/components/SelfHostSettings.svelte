@@ -112,7 +112,7 @@
 	<div class="setting-item-info">
 		<div class="setting-item-name">Control-plane URL</div>
 		<div class="setting-item-description">
-			e.g. http://192.168.178.40:8095 (reachable over your VPN)
+			e.g. http://relay.example.com:8095 (reachable over your VPN/LAN)
 		</div>
 	</div>
 	<div class="setting-item-control">
