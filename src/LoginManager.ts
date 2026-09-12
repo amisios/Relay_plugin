@@ -3,6 +3,8 @@
 import type { RequestUrlResponsePromise } from "obsidian";
 import {
 	User,
+	colorFromString,
+	userColorFromHex,
 	resolveProfileEmail,
 	resolveProfileName,
 	resolveProfilePicture,
@@ -234,6 +236,12 @@ export class LoginManager extends Observable<LoginManager> {
 				selfHost.icon ?? "",
 				fake.identityToken,
 			);
+			// Deterministic color per identity (stable across clients/sessions),
+			// or the user's explicit choice — never the random default, which can
+			// make two collaborators share a color.
+			this.user.color = selfHost.color
+				? userColorFromHex(selfHost.color)
+				: colorFromString(selfHost.userId);
 			this.openSettings = openSettings;
 			this.getFlags();
 			RelayInstances.set(this, "loginManager");

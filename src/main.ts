@@ -374,6 +374,7 @@ export default class Live extends Plugin {
 			controlPlaneUrl: url,
 			displayName: s.displayName?.trim() || "Anonymous",
 			icon: s.icon,
+			color: s.color,
 			userId,
 		};
 	}

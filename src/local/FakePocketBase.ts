@@ -17,6 +17,8 @@ export interface SelfHostConfig {
 	controlPlaneUrl: string;
 	displayName: string;
 	icon?: string;
+	/** Cursor/presence color as a hex string (e.g. "#ee6352"); optional. */
+	color?: string;
 	/** Stable, self-declared user id (generated once, persisted). */
 	userId: string;
 }
@@ -26,6 +28,7 @@ export interface SelfHostSettings {
 	controlPlaneUrl?: string;
 	displayName?: string;
 	icon?: string;
+	color?: string;
 	userId?: string;
 }
 
