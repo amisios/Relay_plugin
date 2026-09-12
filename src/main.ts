@@ -76,7 +76,6 @@ import {
 } from "./ui/SyncStatusView";
 import { type SettingsTree, NamespacedSettings, Settings } from "./SettingsStorage";
 import { ObsidianFileAdapter, ObsidianNotifier } from "./debugObsididan";
-import { BugReportModal } from "./ui/BugReportModal";
 import { IndexedDBAnalysisModal } from "./ui/IndexedDBAnalysisModal";
 
 import { UpdateManager } from "./UpdateManager";
@@ -707,15 +706,6 @@ export default class Live extends Plugin {
 				this.openReleaseManager();
 			},
 		});
-		this.addCommand({
-			id: "send-bug-report",
-			name: "Send bug report",
-			callback: () => {
-				const modal = new BugReportModal(this.app, this);
-				this.openModals.push(modal);
-				modal.open();
-			},
-		});
 
 		this.register(
 			this.debugSettings.subscribe((settings) => {
@@ -939,8 +929,9 @@ export default class Live extends Plugin {
 			tokenRefreshJitterSeed,
 		);
 
-		// In self-hosted mode, probe the control-plane's health (not system3.md),
-		// so connectivity reflects the VPN/control-plane, not the public internet.
+		// In self-hosted mode, probe the control-plane's health (not the upstream
+		// cloud), so connectivity reflects the VPN/control-plane, not the public
+		// internet.
 		const healthUrl = selfHost
 			? `${selfHost.controlPlaneUrl}/health`
 			: HEALTH_URL;

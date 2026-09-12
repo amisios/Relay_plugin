@@ -1,13 +1,10 @@
 <script lang="ts">
 	import { debounce, Notice, Platform } from "obsidian";
 	import type Live from "../main";
-	import GetInTouch from "./GetInTouch.svelte";
 	import WelcomeHeader from "./WelcomeHeader.svelte";
-	import WelcomeFooter from "./WelcomeFooter.svelte";
 	import AccountSettingItem from "./AccountSettingItem.svelte";
 	import SettingItemHeading from "./SettingItemHeading.svelte";
 	import Callout from "./Callout.svelte";
-	import Discord from "./Discord.svelte";
 	import Announcement from "./Announcement.svelte";
 	import RelayText from "./RelayText.svelte";
 	import type { LoginManager, Provider } from "src/LoginManager";
@@ -308,7 +305,6 @@
 {#if $lm.hasUser && $lm.user}
 	<SettingItemHeading>
 		<RelayText slot="name" />
-		<GetInTouch />
 	</SettingItemHeading>
 	<SettingItemHeading name="Account"></SettingItemHeading>
 	<AccountSettingItem user={$lm.user}>
@@ -325,115 +321,12 @@
 	{/if}
 	<div class="welcome">
 		<WelcomeHeader />
-		{#if $automaticFlow}
-			<div class="login-buttons">
-				{#each $visibleProviders as provider (provider)}
-					<button
-						class={`${provider.startsWith("oidc") ? "oidc" : provider}-sign-in-button`}
-						disabled={$pending || !$configuredProviders.contains(provider)}
-						transition:slide={{
-							duration: $shouldAnimate ? 300 : 0,
-							easing: quintOut,
-						}}
-						on:click={debounce(async () => {
-							pending.set(true);
-							await login(provider);
-						})}
-						>Sign in with {$providerDisplayNames[provider] ||
-							capitalize(provider)}</button
-					>
-				{/each}
-			</div>
-		{:else}
-			<div class="login-buttons">
-				{#each $visibleProviders as provider (provider)}
-					{#if providers[provider]}
-						<a href={providers[provider].fullAuthUrl} target="_blank">
-							<button
-								class={`${provider.startsWith("oidc") ? "oidc" : provider}-sign-in-button`}
-								disabled={$pending || !providers[provider]}
-								transition:slide={{
-									duration: $shouldAnimate ? 300 : 0,
-									easing: quintOut,
-								}}
-								on:click={() => {
-									pending.set(true);
-									poll(provider);
-								}}
-								>Sign in with {$providerDisplayNames[provider] ||
-									capitalize(provider)}</button
-							>
-						</a>
-					{:else}
-						<button
-							class={`${provider.startsWith("oidc") ? "oidc" : provider}-sign-in-button`}
-							disabled={true}
-							transition:slide={{
-								duration: $shouldAnimate ? 300 : 0,
-								easing: quintOut,
-							}}
-							>Sign in with {$providerDisplayNames[provider] ||
-								capitalize(provider)}</button
-						>
-					{/if}
-				{/each}
-			</div>
-		{/if}
-		{#if $error}
-			<p>
-				{$error}.<br />
-				{#if $timedOut && $selectedProvider}
-					Already logged in? <button
-						class="link link-button"
-						on:click={debounce(() => {
-							poll($selectedProvider);
-						})}>(click here)</button
-					>
-				{/if}
-			</p>
-			<p class="not-working">
-				Not working?
-				<button
-					class="link link-button"
-					on:click={() => {
-						pending.set(false);
-						automaticFlow.set(false);
-						error.set("");
-						selectedProvider.set("");
-						hasProviderInfo.set(false);
-						initiate();
-					}}>(try again)</button
-				>
-			</p>
-		{:else if $pending}
-			<div>
-				<p class="continue">Continue in your browser...</p>
-				<p class="not-working">
-					Not working?
-					<button
-						class="link link-button"
-						on:click={() => {
-							pending.set(false);
-							automaticFlow.set(false);
-							error.set("");
-							selectedProvider.set("");
-						}}>(try again)</button
-					>
-				</p>
-			</div>
-		{/if}
-	</div>
-	{#if $loginSettings.provider && !$pending}
-		<p class="choose-another">
-			<button
-				class="link link-button"
-				on:click={debounce(() => {
-					clearPreferredProvider();
-				})}>(choose another provider)</button
-			>
+		<p class="description">
+			This build connects only to a self-hosted control-plane. Set your
+			display name and control-plane URL in the settings above, then
+			disable and re-enable this plugin to connect.
 		</p>
-	{/if}
-	<WelcomeFooter />
+	</div>
 {/if}
 
 <style>
