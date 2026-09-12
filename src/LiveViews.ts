@@ -56,6 +56,12 @@ import { trackAsyncCleanup } from "./reloadUtils";
 import { transitionViewsOffline } from "./offlineViews";
 import type { ObsidianCanvas } from "src/CanvasView";
 
+// Injected at build time from the source manifest id (see esbuild.config.mjs).
+// Must match the shipped manifest id: this resolves THIS plugin (and its
+// LiveViewManager) from inside a CodeMirror editor, which the editor↔CRDT
+// binding depends on.
+declare const PLUGIN_ID: string;
+
 /**
  * Access the LiveViewManager singleton via the Obsidian plugin registry.
  * Replaces ConnectionManagerStateField — no CM6 state field needed since
@@ -72,7 +78,7 @@ export function getConnectionManager(
 					plugins?: Record<string, { _liveViews?: LiveViewManager }>;
 				};
 			};
-		} | undefined)?.app?.plugins?.plugins?.["system3-relay"]?._liveViews ?? null
+		} | undefined)?.app?.plugins?.plugins?.[PLUGIN_ID]?._liveViews ?? null
 	);
 }
 
@@ -1156,13 +1162,13 @@ export class LiveViewManager {
 	}
 
 	goOffline() {
-		this.log("[System 3][Relay][Live Views] going offline");
+		this.log("[Custom Relay][Live Views] going offline");
 		transitionViewsOffline(this.views);
 		void this.refresh("[NetworkStatus]");
 	}
 
 	goOnline() {
-		this.log("[System 3][Relay][Live Views] going online");
+		this.log("[Custom Relay][Live Views] going online");
 		void this.refresh("[NetworkStatus]");
 		this.sharedFolders.items().forEach((folder: SharedFolder) => {
 			void folder.connect();
@@ -1657,7 +1663,7 @@ export class LiveViewManager {
 
 		if (attemptedConnections > backgroundConnections) {
 			this.warn(
-				`[System 3][Relay][Live Views] connection pool (max ${backgroundConnections}): rejected connections for ${
+				`[Custom Relay][Live Views] connection pool (max ${backgroundConnections}): rejected connections for ${
 					attemptedConnections - backgroundConnections
 				} views`,
 			);
@@ -1769,7 +1775,7 @@ export class LiveViewManager {
 		try {
 			views = await this.getViews();
 		} catch (e) {
-			this.warn("[System 3][Relay][Live Views] error getting views", e);
+			this.warn("[Custom Relay][Live Views] error getting views", e);
 			return false;
 		}
 		const activeDocumentFolders = this.findFolders();

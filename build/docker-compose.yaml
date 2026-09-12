@@ -1,0 +1,17 @@
+name: relay-plugin-build
+
+# Build the plugin fork into ../dist/{main.js,manifest.json,styles.css}:
+#
+#   cd Relay_plugin/build
+#   docker compose run --rm build
+#
+# Then copy those three files into your Obsidian vault at
+#   <vault>/.obsidian/plugins/system3-relay/
+
+services:
+  build:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    volumes:
+      - ../dist:/out

@@ -10,6 +10,10 @@ node_modules
 
 *.js
 
+# build output (Dockerized fork build)
+dist/
+.build-status/
+
 # Exclude sourcemaps
 *.map
 

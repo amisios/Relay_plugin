@@ -88,6 +88,11 @@ import { ContentAddressedFileStore, isSyncFile } from "./SyncFile";
 import { isDocument } from "./Document";
 import { isCanvas } from "./Canvas";
 import { EndpointManager, type EndpointSettings } from "./EndpointManager";
+import type {
+	SelfHostConfig,
+	SelfHostSettings,
+} from "./local/FakePocketBase";
+import { v4 as uuidv4 } from "uuid";
 import { generateHash } from "./hashing";
 import { normalizeNoteText } from "./diskText";
 import { SelfHostModal } from "./ui/SelfHostModal";
@@ -144,6 +149,10 @@ type VaultDeleteEvent = {
 declare const HEALTH_URL: string;
 declare const GIT_TAG: string;
 declare const REPOSITORY: string;
+// The shipped manifest id (injected at build time). Used to open this plugin's
+// own settings tab and to qualify its command ids — both break if the literal
+// drifts from the renamed manifest id.
+declare const PLUGIN_ID: string;
 
 export default class Live extends Plugin {
 	api!: Api;
@@ -180,6 +189,7 @@ export default class Live extends Plugin {
 	public releaseSettings!: NamespacedSettings<ReleaseSettings>;
 	public loginSettings!: NamespacedSettings<LoginSettings>;
 	public endpointSettings!: NamespacedSettings<EndpointSettings>;
+	public selfHostSettings!: NamespacedSettings<SelfHostSettings>;
 	private pluginRegistrySettings!: NamespacedSettings<PluginRegistrationSettings>;
 	private textViewRegistry!: TextViewRegistry;
 	debug!: (...args: unknown[]) => void;
@@ -342,6 +352,31 @@ export default class Live extends Plugin {
 
 	buildApiUrl(path: string) {
 		return this.loginManager.getEndpointManager().getApiUrl() + path;
+	}
+
+	/**
+	 * Read self-hosted settings and, if a control-plane URL is configured, return
+	 * a complete SelfHostConfig (generating + persisting a stable user id on first
+	 * use). Returns undefined when not configured (stock/system3 mode).
+	 */
+	private async resolveSelfHostConfig(): Promise<SelfHostConfig | undefined> {
+		const s = this.selfHostSettings.get() ?? {};
+		const url = s.controlPlaneUrl?.trim();
+		if (!url) return undefined;
+		let userId = s.userId;
+		if (!userId) {
+			userId = uuidv4();
+			await this.selfHostSettings.update((current) => ({
+				...current,
+				userId,
+			}));
+		}
+		return {
+			controlPlaneUrl: url,
+			displayName: s.displayName?.trim() || "Anonymous",
+			icon: s.icon,
+			userId,
+		};
 	}
 
 	/**
@@ -582,10 +617,10 @@ export default class Live extends Plugin {
 		}
 		this.notifier = new ObsidianNotifier();
 
-		this.debug = curryLog("[System 3][Relay]", "debug");
-		this.log = curryLog("[System 3][Relay]", "log");
-		this.warn = curryLog("[System 3][Relay]", "warn");
-		this.error = curryLog("[System 3][Relay]", "error");
+		this.debug = curryLog("[Custom Relay]", "debug");
+		this.log = curryLog("[Custom Relay]", "log");
+		this.warn = curryLog("[Custom Relay]", "warn");
+		this.error = curryLog("[Custom Relay]", "error");
 
 		this.log("Plugin started", { version: this.manifest.version });
 
@@ -599,6 +634,7 @@ export default class Live extends Plugin {
 		this.releaseSettings = new NamespacedSettings(settingsTree, "release");
 		this.loginSettings = new NamespacedSettings(settingsTree, "login");
 		this.endpointSettings = new NamespacedSettings(settingsTree, "endpoints");
+		this.selfHostSettings = new NamespacedSettings(settingsTree, "selfHost");
 		this.pluginRegistrySettings = new NamespacedSettings(
 			settingsTree,
 			"plugins",
@@ -807,7 +843,20 @@ export default class Live extends Plugin {
 
 		// Initialize and validate endpoints before creating LoginManager
 		const endpointManager = new EndpointManager(this.endpointSettings);
-		await this.validateEndpointsOnStartup(endpointManager);
+		const selfHost = await this.resolveSelfHostConfig();
+		if (selfHost) {
+			// Point API + AUTH at the self-hosted control-plane, no license check.
+			endpointManager.setCustomEndpoints(
+				selfHost.controlPlaneUrl,
+				selfHost.controlPlaneUrl,
+			);
+			this.log("Self-hosted mode", {
+				controlPlane: selfHost.controlPlaneUrl,
+				user: selfHost.displayName,
+			});
+		} else {
+			await this.validateEndpointsOnStartup(endpointManager);
+		}
 
 		this.loginManager = new LoginManager(
 			this.vault.getName(),
@@ -816,6 +865,7 @@ export default class Live extends Plugin {
 			this.patchWebviewer.bind(this),
 			this.loginSettings,
 			endpointManager,
+			selfHost,
 		);
 		this.relayManager = new RelayManager(this.loginManager);
 		this.relayDebugAPI = new RelayDebugAPI(this);
@@ -889,7 +939,12 @@ export default class Live extends Plugin {
 			tokenRefreshJitterSeed,
 		);
 
-		this.networkStatus = new NetworkStatus(this.timeProvider, HEALTH_URL);
+		// In self-hosted mode, probe the control-plane's health (not system3.md),
+		// so connectivity reflects the VPN/control-plane, not the public internet.
+		const healthUrl = selfHost
+			? `${selfHost.controlPlaneUrl}/health`
+			: HEALTH_URL;
+		this.networkStatus = new NetworkStatus(this.timeProvider, healthUrl);
 
 		this.backgroundSync = new BackgroundSync(
 			this.loginManager,
@@ -1212,7 +1267,7 @@ export default class Live extends Plugin {
 			this.app as typeof this.app & { setting: SettingsController }
 		).setting;
 		await setting.open();
-		await setting.openTabById("system3-relay");
+		await setting.openTabById(PLUGIN_ID);
 		this.settingsTab.navigateTo(path);
 	}
 
@@ -1361,7 +1416,7 @@ export default class Live extends Plugin {
 			}),
 		);
 
-		const vaultLog = curryLog("[System 3][Relay][Vault]", "log");
+		const vaultLog = curryLog("[Custom Relay][Vault]", "log");
 
 		const handlePromiseRejection = (event: PromiseRejectionEvent): void => {
 			//event.preventDefault();
@@ -1849,7 +1904,7 @@ export default class Live extends Plugin {
 				};
 			};
 			const appCommands = appAny.commands;
-			const qualifiedCommand = `system3-relay:${command}`;
+			const qualifiedCommand = `${PLUGIN_ID}:${command}`;
 			if (
 				Object.prototype.hasOwnProperty.call(
 					appCommands.commands,

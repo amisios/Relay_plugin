@@ -4,6 +4,11 @@ import type { App, TFile, CachedMetadata } from "obsidian";
 import type { SharedFolders } from "./SharedFolder";
 import type { LiveViewManager } from "./LiveViews";
 
+// Injected at build time from the source manifest id (see esbuild.config.mjs).
+// This resolves THIS plugin instance from inside a CodeMirror editor; it must
+// match the shipped manifest id or the editor↔CRDT binding never attaches.
+declare const PLUGIN_ID: string;
+
 export interface MetadataBridge {
 	onMeta(
 		tfile: TFile,
@@ -23,7 +28,7 @@ export function getRelayPlugin(editor: EditorView): RelayPlugin | null {
 	return (
 		(fileInfo as {
 			app?: { plugins?: { plugins?: Record<string, RelayPlugin | undefined> } };
-		} | undefined)?.app?.plugins?.plugins?.["system3-relay"] ?? null
+		} | undefined)?.app?.plugins?.plugins?.[PLUGIN_ID] ?? null
 	);
 }
 

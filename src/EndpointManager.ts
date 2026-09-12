@@ -189,6 +189,22 @@ export class EndpointManager {
 	}
 
 	/**
+	 * Self-hosted mode: point the API and AUTH endpoints directly at a
+	 * user-supplied control-plane URL, bypassing the signed-license validation
+	 * (which only applies to upstream-issued enterprise tenants). Both URLs are
+	 * typically the same control-plane. No HTTPS enforcement here, so http:// on
+	 * a private VPN is allowed.
+	 */
+	setCustomEndpoints(apiUrl: string, authUrl: string): void {
+		this._validatedApiUrl = apiUrl.replace(/\/+$/, "");
+		this._validatedAuthUrl = authUrl.replace(/\/+$/, "");
+		this.log("Using custom (self-hosted) endpoints", {
+			apiUrl: this._validatedApiUrl,
+			authUrl: this._validatedAuthUrl,
+		});
+	}
+
+	/**
 	 * Get the current API URL - either validated custom URL or default
 	 */
 	getApiUrl(): string {

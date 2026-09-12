@@ -29,6 +29,14 @@ const getGitTag = () => {
 };
 const gitTag = getGitTag();
 
+// The plugin id from the source manifest. Several runtime paths resolve THIS
+// plugin instance out of `app.plugins.plugins[<id>]` from inside a CodeMirror
+// editor (the editor↔CRDT binding depends on it), so it must match the shipped
+// manifest id. Injecting it here keeps the fork's rename in one place instead of
+// hardcoded string literals that silently break when the id changes.
+const pluginId = JSON.parse(fs.readFileSync("manifest.json", "utf8")).id;
+console.log("plugin id:", pluginId);
+
 const develop = process.argv[2] === "develop";
 const staging = process.argv[2] === "staging";
 const watch = process.argv[2] === "watch" || process.argv.includes("--watch");
@@ -180,6 +188,7 @@ const context = await esbuild.context({
 		HEALTH_URL: `"${healthUrl}"`,
 		API_URL: `"${apiUrl}"`,
 		AUTH_URL: `"${authUrl}"`,
+		PLUGIN_ID: JSON.stringify(pluginId),
 		REPOSITORY: `"No-Instructions/Relay"`,
 	},
 	treeShaking: true,

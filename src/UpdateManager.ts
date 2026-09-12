@@ -81,8 +81,8 @@ export class UpdateManager extends Observable<UpdateManager> {
 		private releaseSettings: NamespacedSettings<ReleaseSettings>,
 	) {
 		super("UpdateManager");
-		this.githubReleases = new LocalStorage("system3-relay/releases");
-		this.releaseChannels = new LocalStorage("system3-relay/releaseChannels");
+		this.githubReleases = new LocalStorage("relay-custom/releases");
+		this.releaseChannels = new LocalStorage("relay-custom/releaseChannels");
 	}
 
 	public get releases(): Release[] {

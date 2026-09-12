@@ -28,6 +28,7 @@ import type { TimeProvider } from "./TimeProvider";
 import { type ServerFlags, FeatureFlagManager } from "./flagManager";
 import type { NamespacedSettings } from "./SettingsStorage";
 import { type EndpointManager } from "./EndpointManager";
+import { FakePocketBase, type SelfHostConfig } from "./local/FakePocketBase";
 
 interface GoogleUser {
 	email: string;
@@ -199,6 +200,7 @@ export class LoginManager extends Observable<LoginManager> {
 	user?: User;
 	resolve?: (code: string) => Promise<RecordAuthResponse<RecordModel>>;
 	private endpointManager: EndpointManager;
+	private selfHost?: SelfHostConfig;
 
 	constructor(
 		vaultName: string,
@@ -207,12 +209,37 @@ export class LoginManager extends Observable<LoginManager> {
 		private beforeLogin: () => void,
 		public loginSettings: NamespacedSettings<LoginSettings>,
 		endpointManager: EndpointManager,
+		selfHost?: SelfHostConfig,
 	) {
 		super();
 		const pbLog = curryLog("[Pocketbase]", "debug");
 		this.authStore = new LocalAuthStore(`pocketbase_auth_${vaultName}`);
 		this.endpointManager = endpointManager;
 		this.updateNetworkMetricDomains();
+
+		// Self-hosted mode: swap the real PocketBase for the control-plane adapter
+		// and use a self-declared identity. Skip OAuth, token refresh, and the
+		// user-existence check entirely.
+		if (selfHost) {
+			this.selfHost = selfHost;
+			const fake = new FakePocketBase(selfHost.controlPlaneUrl, {
+				id: selfHost.userId,
+				name: selfHost.displayName,
+			});
+			this.pb = fake as unknown as PocketBase;
+			this.user = new User(
+				selfHost.userId,
+				selfHost.displayName,
+				"",
+				selfHost.icon ?? "",
+				fake.identityToken,
+			);
+			this.openSettings = openSettings;
+			this.getFlags();
+			RelayInstances.set(this, "loginManager");
+			return;
+		}
+
 		this.pb = new PocketBase(this.endpointManager.getAuthUrl(), this.authStore);
 		this.pb.beforeSend = (url, options) => {
 			pbLog(url, options);
@@ -264,6 +291,7 @@ export class LoginManager extends Observable<LoginManager> {
 	}
 
 	refreshToken() {
+		if (this.selfHost) return; // self-declared identity never expires / refreshes
 		if (this.pb.authStore.isValid) {
 			const pb = this.pb;
 			this.user = this.makeUser(pb.authStore);
@@ -310,6 +338,11 @@ export class LoginManager extends Observable<LoginManager> {
 		authData?: RecordAuthResponse<RecordModel>,
 		provider?: string,
 	): boolean {
+		if (this.selfHost) {
+			// User was set from settings in the constructor; just announce it.
+			this.notifyListeners();
+			return true;
+		}
 		if (!this.pb.authStore.isValid) {
 			this.notifyListeners(); // notify anyway
 			return false;
@@ -485,6 +518,7 @@ export class LoginManager extends Observable<LoginManager> {
 	}
 
 	logout() {
+		if (this.selfHost) return; // no logout in self-hosted mode (self-declared identity)
 		this.pb.cancelAllRequests();
 		void this.pb.realtime.unsubscribe();
 		this.pb.authStore.clear();
@@ -560,6 +594,10 @@ export class LoginManager extends Observable<LoginManager> {
 		whichFetch: typeof fetch | typeof customFetch,
 		providerNames: string[],
 	): Promise<Record<string, Provider>> {
+		if (this.selfHost) {
+			// No OAuth in self-hosted mode; identity is self-declared.
+			return {};
+		}
 		this.beforeLogin();
 		const authMethods = await this.pb
 			.collection("users")

@@ -45,7 +45,7 @@
 	// Load cached providers from localStorage, keyed by auth URL
 	let cachedProviders = writable<string[]>([]);
 	let shouldAnimate = writable<boolean>(false);
-	const PROVIDERS_CACHE_PREFIX = "system3-relay-auth-providers-";
+	const PROVIDERS_CACHE_PREFIX = "relay-custom-auth-providers-";
 
 	function getCacheKey(): string {
 		// Use the PocketBase URL as the cache key
