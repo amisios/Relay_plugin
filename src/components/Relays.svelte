@@ -155,7 +155,7 @@
 		if (availableFolders.length === 0) {
 			if (totalRemoteFolders === 0) {
 				noFoldersMessage =
-					"Join a Relay Server, or add a Shared Folder on another device.";
+					"Add a folder with its folder secret in Custom Relay settings.";
 			} else {
 				noFoldersMessage = "All remote folders are already in your vault.";
 			}
@@ -192,36 +192,8 @@
 	}
 </script>
 
-<SettingItemHeading name="Join a Relay Server"></SettingItemHeading>
-<SettingGroup>
-	<SettingItem
-		name="Share key"
-		description="Enter the code that was shared with you."
-	>
-		<SecretText
-			bind:value={shareKey}
-			disabled={invitePending}
-			placeholder="Enter share key"
-			name="share-key"
-			readonly={false}
-			copyOnClick={false}
-			on:input={handleShareKeyInput}
-			on:enter={debounce(() => handleJoinRelayFromInvite(shareKey))}
-			invalid={invalidShareKey}
-		/>
-		<button
-			class="mod-cta system3-button"
-			data-action="join-relay"
-			disabled={invitePending}
-			on:click={debounce(() => handleJoinRelayFromInvite(shareKey))}
-		>
-			Join
-		</button>
-	</SettingItem>
-</SettingGroup>
-
 <SettingItemHeading
-	helpText="A Relay Server coordinates real-time updates between collaborators. You can add collaborators and share folders on the Relay Server's settings page."
+	helpText="A Relay Server coordinates real-time updates between collaborators. Folders are added with their folder secret in Custom Relay settings."
 >
 	<span slot="name" style="display: inline-flex; align-items: center">
 		Relay Servers
@@ -245,14 +217,6 @@
 			></SettingsControl>
 		</SlimSettingItem>
 	{/each}
-	<SlimSettingItem description="" name="">
-		<button
-			class="mod-cta system3-button"
-			on:click={debounce(() => handleCreateRelay())}
-		>
-			Create
-		</button>
-	</SlimSettingItem>
 </SettingGroup>
 
 <SettingItemHeading
@@ -262,7 +226,7 @@
 <SettingGroup>
 	{#if $sharedFolders.items().length === 0}
 		<SettingItem
-			description="No shared folders on this device. Share folders from a Relay Server's settings page to begin collaboration."
+			description="No shared folders on this device. Add a folder with its folder secret in Custom Relay settings, then add it to your vault."
 		/>
 	{/if}
 	{#each $sharedFolders.items().sort(folderSort) as folder}
