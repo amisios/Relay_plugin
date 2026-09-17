@@ -1,210 +1,130 @@
-# Relay 🛰️
+# Custom Relay 🛰️
 
-True **multiplayer mode** for Obsidian. 💃🕺
+Real-time collaborative editing in Obsidian — against **your own server**.
 
--   **Collaborate in real time** with live cursors.
--   **Edit offline** and sync seamlessly when you're back on.
--   **Share folders** and manage access to updates.
+Custom Relay is a fork of [Relay](https://github.com/No-Instructions/Relay) (by System 3, MIT) that
+connects to a relay server and control-plane **you host yourself**. No vendor account, no sign-in,
+no collaborator limit. It installs under its own id (`relay-custom`), so it can run **alongside**
+the official Relay plugin without conflicting.
 
-![Relay Product Demo](https://f.system3.md/cdn-cgi/image/format=auto/demo.gif)
+- ✍️ **Live collaborative editing** with other people's cursors
+- 📁 **Multiple shared folders** on one relay, each protected by its own **folder secret**
+- 🔒 **You control access** — the server only hands out tokens to folder members
+- 🧩 **Self-declared identity** — pick a display name and colour, no OAuth
 
-Relay is a collaborative editing plugin for Obsidian by [System 3](https://system3.md/). It uses CRDTs to enable snappy, local-first, real-time and asynchronous collaboration.
-
-[Join our Discord](https://discord.system3.md) for support and a good time.
-
-### How does Relay work?
-
-In a nutshell, Relay:
-
-1. **Tracks updates to designated folders**. The plugin uses conflict-free replicated data types (CRDTs) to track updates to folders that you designate within your vault.
-2. **Relays updates.** It sends those updates up to Relay servers 🛰️, which then echo the updates out to all collaborators on the relay.
-3. **Integrates updates.** Your collaborator receives the updates and integrates them seamlessly as they come in.
-
-### What's a CRDT?
-
-Great question. CRDT stands for **conflict-free replicated data type** and it's a technology that's critical to making local-first real-time collaboration work.
-
-> The fundamental idea is this: You have data. This data is stored on multiple replicas. CRDTs describe how to coordinate these replicas to always arrive at a consistent state. [1]
-
-For a great intro and overview, watch the first 10 minutes of this video by Martin Kleppmann. If you want to get into the nitty-gritty, watch the whole thing.
-
-[![Intro to the Modern State of Synchronization](https://f.system3.md/cdn-cgi/image/format=auto,width=600/crdt-explainer-thumnail.png)](https://youtube.com/watch?v=x7drE24geUw)
-
-For more, check out this video: [Intro to the Modern State of Synchronization](https://youtu.be/tSvlvMTHhWY?si=Rp6FepkeS7N6y3zO) by [Kevin Jahns](https://github.com/dmonad). Jahns is the maintainer of [Yjs](https://docs.yjs.dev/), which is the open source CRDT that we use in Relay.
-
-## What can I do with Relay?
-
-Oh, the things you can do.
-
-Here's a video tour:  
-[![Watch the video](https://f.system3.md/cdn-cgi/image/format=auto,width=600/walkthrough-video-thumbnail.png)](https://youtu.be/Ol6zDF5vrZo)
-
-
-### Create a new relay
-
-1. Go to Obsidian settings (gear icon in lower left of Obsidian)
-2. Go to Relay settings (on the left, at the bottom)
-3. Create new relay
-4. Add shared folder(s) to the relay
-
-![Demo - Create a new Relay](https://f.system3.md/cdn-cgi/image/format=auto/create%20a%20new%20relay.gif)
-
-### Add users to the relay by giving them a share key
-
-1. Go to settings for your relay
-2. Grab the share key
-3. Give it to your people
-
-![Demo -Sharing a Relay](https://f.system3.md/cdn-cgi/image/format=auto/sharing%20a%20relay.gif)
-
-### Collaborate to your heart's content
-
--   If you're in a note at the same time, you'll see each others' cursors
--   You can edit the same block at the same time (magic of CRDTs)
--   You can edit offline and it'll all be fine when you come back on (CRDTs ftw)
--   If you hit any bugs or have questions/requests let us know in the [Discord](https://discord.system3.md)
-
-### Kick user from a relay
-
--   Right now anyone with the share key can join the relay
--   So you can kick the user but they could rejoin if they want
--   We'll be adding stricter sharing options in the future
-
-![Demo - Kick a user from a Relay](https://f.system3.md/cdn-cgi/image/format=auto/kick%20user%20from%20a%20relay.webp)
-
-### Join someone else's relay
-
-1. Get their share key
-2. Use it to join their relay
-3. Add the folders you want to your vault
-
-![Demo - Join a Relay](https://f.system3.md/cdn-cgi/image/format=auto/join%20a%20relay.webp)
-
-### Destroy the relay when you're done
-
-If you're the owner of a relay, you can destroy the copy on the server.
-
-If you're a member but not the owner, you can leave the relay (destroy your connection to the server), and you can destroy the local data.
-
-## FAQ
-
-Asked more or less frequently.
-
-### Which file types are supported?
-
-Relay currently has two types of storage, document storage and attachment storage.
-Document storage is backed by our real-time CRDT servers, while Attachments are stored as file blobs.
-
-Document storage:
--   Folders
--   Markdown files
--   Canvases
-
-Attachment storage:
--   Bases
--   Images
--   Audio
--   Video
--   PDFs
--   Other files (must be enabled in settings)
-
-
-You need to have available Attachment storage in order to sync bases/images/audio/video/PDFs/etc.
-
-
-### How much does Relay cost?
-
-#### Free ($0)
-- Up to 3 users
-- 2 devices per user
-- Unlimited markdown and canvas files
-- No cloud storage (0 MB)
-- Cloud deployment (.md only)
-- Self-hosted Relay Server
-- BYO storage (unmetered, self-host only)
-- Community support
-
-#### Hobby ($5 per month total)
-- Up to 6 users
-- 3 devices per user
-- Unlimited markdown and canvas files
-- 10 GB cloud storage included
-- Self-hosted Relay Server
-- BYO storage (unmetered, self-host only)
-- Community support
-
-#### Starter ($6 per user per month)
-- Up to 50 users
-- 6 devices per user
-- Unlimited markdown and canvas files
-- 20 GB + 5 GB/user cloud storage included
-- Self-hosted Relay Server
-- BYO storage (unmetered)
-- Role-based access control
-- Single sign-on
-- Private Discord / Slack channel
-- Email support
-
-
-We offer discounts for educational use.
-
-
-### Do I need to be online to use Relay?
-
-Relay is local-first -- this means that all of your edits are tracked locally and the server is used to _relay_ the edits to your collaborators. You can work offline and your edits will be merged once you come back online.
-
-### How are edits merged?
-
-We use a **Conflict-Free Replicable Data Types** (CRDTs) provided by the excellent yjs library.
-
-### Is Relay Open Source?
-
-The Obsidian plugin code is MIT licensed (this repo).
-
-The [Relay Server](https://github.com/No-Instructions/y-sweet) is a fork of y-sweet and is MIT licensed. 
-
-Our login, permissions, and billing server code is proprietary.
-
-
-### Can I self-host?
-
-You can self-host your Relay Server on any tier (we don't charge for privacy).
-
-If you self-host your Relay Server on a private network then your users will still perform login and permissions checks through our control plane, but they will connect directly to your server. Your content will be completely private and inaccessible by us.
-
-For instructions on hosting your Relay Server on fly.io, see [Relay Server Template](https://github.com/No-Instructions/relay-server-template).
-
-[Join our Discord](https://discord.system3.md) for help configuring your self-hosted Relay Server.
-
-
-### Who's behind Relay?
-
-Relay is made by [System 3](https://system3.md/). The legal entity behind System 3 is No Instructions, LLC.
-
-Right now the whole operation is two people:
-
--   Dan, a software engineer who has worked at places like [Planet](http://planet.com/) and [Benchling](https://www.benchling.com/)
--   Matt, a product manager and psychotherapist (in training) who has worked at places like [Meta AI](https://ai.meta.com/meta-ai/), [Lumosity](https://www.lumosity.com/en/), and [Big Health](https://www.bighealth.com/)
-
-
-## Do you have a privacy policy?
-
-Yes: [https://system3.md/Privacy+policy](https://system3.md/Privacy+policy).
-
-
-## How can I make a responsible security disclosure?
-
-Please email security@system3.md
-
-
-## Installing Relay
-
-You can search for `Relay` in the Obsidian Community plugins list,
-or click this [Obsidian Plugin Link](https://obsidian.md/plugins?search=system3-relay).
-
-
-[Join our Discord](https://discord.system3.md)!
+> **Requires a self-hosted backend.** This plugin does nothing on its own — someone must run the
+> companion stack (relay server + control-plane). Ask them for the details below.
 
 ---
 
-[1] Intro to CRDTs by Lars Hupel [https://lars.hupel.info/topics/crdt/01-intro/](https://lars.hupel.info/topics/crdt/01-intro/)
+## What you need before installing
+
+| Thing | Example | Where from |
+|---|---|---|
+| **Control-plane URL** | `http://relay.example.com:8094` | Your admin |
+| **Folder secret** (one per folder) | `K3PQ-7VWM-2XRT-9HFD` | Your admin |
+| **Network access** | VPN / LAN | Your admin |
+
+---
+
+## 1. Install
+
+Custom Relay isn't in the Obsidian community store — install it with **BRAT**:
+
+1. Obsidian → **Settings → Community plugins → Browse** → search **BRAT** → Install → Enable.
+2. Settings → **BRAT** → **Add beta plugin** → paste:
+   ```
+   amisios/Relay_plugin
+   ```
+3. Settings → **Community plugins** → enable **Custom Relay**.
+
+## 2. Set yourself up
+
+Settings → **Custom Relay**:
+
+- **Display name** — how collaborators see you.
+- **Your colour** — your cursor colour (pick a preset or a custom one).
+- **Control-plane URL** — the URL your admin gave you.
+
+Click **Save**. The plugin reloads itself to apply — that's expected.
+
+You'll now see the relay, but **no folders yet**. That's by design: the URL gets you into the
+relay, but every folder needs its own secret.
+
+## 3. Add a shared folder
+
+1. Settings → **Custom Relay** → **Add a folder** → paste the **folder secret** → **Add folder**.
+   The plugin reloads.
+2. Open the relay's folder list, find the folder, and click **Add to vault** — choose where it
+   should live in your vault.
+
+It now syncs. Repeat with another secret for each additional folder.
+
+---
+
+## How access works
+
+- The **control-plane URL** alone makes you a member of the relay — it shows you nothing.
+- **Every folder is private** and gated by its own secret. Redeeming a secret records you as a
+  member of that folder.
+- The server **refuses to issue tokens** for folders you're not a member of, so a folder you
+  haven't unlocked is both invisible and unreachable.
+- If your access is revoked, it stops working within ~10 minutes (the token lifetime).
+
+**Security note, honestly stated:** identity here is *self-declared* — the plugin simply tells the
+server who you are. Access is gated by knowing a folder secret, which is strong against outsiders
+and accidents, but this is designed for a **small trusted group on a private network**, not for
+mutually-distrusting users on the open internet.
+
+---
+
+## For the admin (server side)
+
+The backend is the companion `relay-selfhost` stack (relay server + control-plane, via Docker).
+Manage folders and membership with:
+
+```bash
+docker exec relay_control_plane node src/index.js admin list
+docker exec relay_control_plane node src/index.js admin folder add "Notes"      # prints a secret
+docker exec relay_control_plane node src/index.js admin folder set-secret Notes # rotate it
+docker exec relay_control_plane node src/index.js admin grant  <userId> Notes   # no secret needed
+docker exec relay_control_plane node src/index.js admin revoke <userId> Notes
+docker exec relay_control_plane node src/index.js admin kick   <userId>         # all folders
+docker exec relay_control_plane node src/index.js admin add    <userId>         # make admin
+```
+
+Changes apply immediately — no restart. Find a user's id in the control-plane logs
+(`docker logs relay_control_plane | grep 'user='`).
+
+---
+
+## Building from source
+
+No Node needed on your machine — the build runs in Docker:
+
+```bash
+cd build
+docker compose run --rm --build build        # -> ../dist/{main.js,manifest.json,styles.css}
+./install.sh /path/to/vault [more/vaults...] # copies them into .obsidian/plugins/relay-custom/
+```
+
+Then reload Obsidian (or toggle the plugin off/on).
+
+---
+
+## Differences from upstream Relay
+
+- Talks to **your** control-plane instead of System 3's; no account or sign-in.
+- **No collaborator cap.**
+- Folders are **admin-created** and gated by **folder secrets** (no folder creation from the UI).
+- Members are read-write; there's no read-only role yet.
+- Installs as `relay-custom` so it **coexists** with the official Relay plugin.
+
+## Credits & licence
+
+All the hard parts — the CRDT sync engine, the merge machinery, the editor integration — are the
+work of [System 3](https://system3.md/) in [Relay](https://github.com/No-Instructions/Relay), and
+of the [y-sweet](https://github.com/jamsocket/y-sweet) / [Yjs](https://github.com/yjs/yjs)
+projects underneath it. This fork only swaps out the hosted control plane for a self-hosted one.
+
+MIT licensed, like upstream. See [LICENSE](LICENSE).
