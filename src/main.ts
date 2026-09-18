@@ -1,4 +1,5 @@
 "use strict";
+import { AttachmentTransfers } from "./AttachmentTransfers";
 
 import type { MergeEvent } from "./merge-hsm/types";
 import {
@@ -66,6 +67,7 @@ import { BackgroundSync } from "./BackgroundSync";
 import { HSMStore } from "./merge-hsm/persistence";
 import { trackAsyncCleanup } from "./reloadUtils";
 import { isDestroyedError } from "./DestroyedError";
+import { handleVaultCreate } from "./vaultCreate";
 import { FeatureFlagToggleModal } from "./ui/FeatureFlagModal";
 import { DebugModal } from "./ui/DebugModal";
 import {
@@ -102,6 +104,8 @@ import {
 	setPluginRequestConfig,
 } from "./customFetch";
 import { RelayDebugAPI } from "./RelayDebugAPI";
+import { buildCliContext } from "./cli/context";
+import { registerRelayCli } from "./cli/registerCli";
 import { isRetryableS3Error } from "./S3Error";
 import { MetadataHealth } from "./MetadataHealth";
 import { createPublicApi, publishPublicApi, type Api } from "./PublicAPI";
@@ -154,6 +158,7 @@ declare const REPOSITORY: string;
 declare const PLUGIN_ID: string;
 
 export default class Live extends Plugin {
+	public attachmentTransfers!: AttachmentTransfers;
 	api!: Api;
 	appId!: string;
 	private _instanceId!: string;
@@ -199,6 +204,10 @@ export default class Live extends Plugin {
 	private pendingVaultDeletes: VaultDeleteEvent[] = [];
 	private pendingVaultDeleteFlush: number | null = null;
 	get metadataBridge(): MetadataBridge | undefined {
+		return this._liveViews;
+	}
+	/** The view manager, for the debug surface's read-only probes. */
+	get liveViews(): LiveViewManager | undefined {
 		return this._liveViews;
 	}
 	fileDiffMergeWarningKey = "file-diff-merge-warning";
@@ -659,6 +668,20 @@ export default class Live extends Plugin {
 				);
 			}),
 		);
+
+		// Canvas presence attaches and detaches with its flag: a refresh
+		// re-attaches every live view, which creates or destroys the
+		// presence plugin for open canvases.
+		let canvasPresence = flagManager.getFlag(flag.enableCanvasPresence);
+		this.register(
+			flagManager.subscribe((manager) => {
+				if (this._unloading) return;
+				const enabled = manager.getFlag(flag.enableCanvasPresence);
+				if (enabled === canvasPresence) return;
+				canvasPresence = enabled;
+				void this._liveViews?.refresh("[Canvas presence flag]");
+			}),
+		);
 		this.savingFlagPolyfill.setEnabled(
 			flagManager.getFlag(flag.enableSavingFlagPolyfill),
 		);
@@ -827,6 +850,8 @@ export default class Live extends Plugin {
 		}));
 
 		this.vault = this.app.vault;
+		this.attachmentTransfers = new AttachmentTransfers(this.vault, this.manifest.id, this.appId);
+		await this.attachmentTransfers.initialize();
 		const vaultName = this.vault.getName();
 		this.fileManager = this.app.fileManager;
 
@@ -1235,6 +1260,7 @@ export default class Live extends Plugin {
 			relayId,
 			authoritative,
 			remote,
+			this.attachmentTransfers,
 		);
 		return folder;
 	}
@@ -1422,25 +1448,7 @@ export default class Live extends Plugin {
 
 		this.registerEvent(
 			this.app.vault.on("create", (tfile) => {
-				// NOTE: this is called on every file at startup...
-				const folder = this.sharedFolders.lookup(tfile.path);
-				if (folder) {
-					// A known file materializes immediately; a new file's registration settles
-					// for a debounce window so a short-lived atomic-write temp
-					// file vanishes before it is place-held and uploaded.
-					if (folder.notifyVaultCreateLegacy(tfile)) {
-						folder.whenReady()
-							.then((folder) => {
-								folder.getFile(tfile);
-							})
-							.catch((error) => {
-								if (isDestroyedError(error)) {
-									return;
-								}
-								this.warn("folder ready failed after file create", error);
-							});
-					}
-				}
+				handleVaultCreate(this, tfile);
 			}),
 		);
 
@@ -1878,6 +1886,32 @@ export default class Live extends Plugin {
 
 		this.backgroundSync.start();
 		this.updateManager.start();
+		this.registerRelayCli();
+	}
+
+	/**
+	 * Register the `relay` command family with the Obsidian CLI. Requires a
+	 * desktop app new enough to expose registerCliHandler; older apps and
+	 * mobile get no commands and no error.
+	 */
+	private registerRelayCli(): void {
+		if (!Platform.isDesktopApp || !requireApiVersion("1.12.2")) return;
+		const registrar = this as unknown as { registerCliHandler?: unknown };
+		if (typeof registrar.registerCliHandler !== "function") return;
+		const ctx = buildCliContext(this, {
+			flags: this.featureSettings,
+			debugging: {
+				get: () => this.debugSettings.get().debugging,
+				set: (on) => {
+					if (on) this.enableDebugging(true);
+					else this.disableDebugging(true);
+				},
+			},
+			metadataHealth: () => this.metadataHealth,
+			debugAPI: this.relayDebugAPI,
+		});
+		const ids = registerRelayCli(this, ctx);
+		this.debug(`[cli] registered ${ids.length} commands`);
 	}
 
 	removeCommand(command: string): void {
@@ -1930,6 +1964,7 @@ export default class Live extends Plugin {
 		setActiveTracker(null);
 		this.promises.destroy();
 		this.promises = null as unknown as typeof this.promises;
+		teardownStep("attachmentTransfers.destroy", () => this.attachmentTransfers?.destroy());
 		teardownStep("pendingVaultDeleteFlush", () => {
 			if (this.pendingVaultDeleteFlush !== null) {
 				window.clearTimeout(this.pendingVaultDeleteFlush);

@@ -610,6 +610,11 @@ export class BackgroundSync extends HasLogging {
 		request: WorkRequest<SyncParticipant>,
 		options: { deferFlush?: boolean } = {},
 	): Promise<WorkCompletion> {
+		try {
+			request.target.checkSyncWork?.(request.intent);
+		} catch (error) {
+			return Promise.reject(errorFromUnknown(error));
+		}
 		if (request.scope === "session" && !request.target.acceptsSession()) {
 			this.clearFailure(this.failureKey(laneFailureKind(request.scope), request.guid));
 			return Promise.resolve({ outcome: "completed" });
@@ -678,6 +683,11 @@ export class BackgroundSync extends HasLogging {
 		request: WorkRequest<SyncParticipant>,
 		error: Error,
 	): Promise<WorkCompletion> {
+		try {
+			request.target.checkSyncWork?.(request.intent);
+		} catch (error) {
+			return Promise.reject(errorFromUnknown(error));
+		}
 		if (request.scope === "session" && !request.target.acceptsSession()) {
 			this.clearFailure(this.failureKey(laneFailureKind(request.scope), request.guid));
 			return Promise.resolve({ outcome: "completed" });
@@ -755,6 +765,11 @@ export class BackgroundSync extends HasLogging {
 		target: SyncParticipant,
 		trigger = "upload",
 	): Promise<SyncCompletionOutcome> {
+		if (!target.canPublishContent) {
+			this.debug(`[enqueueUpload] skipped ${target.path}: read-only access`);
+			this.clearFailure(this.failureKey("sync", target.guid));
+			return "cancelled";
+		}
 		const completion = await this.admit(
 			createWorkRequest(target, "upload", trigger),
 		);
@@ -1602,6 +1617,10 @@ export class BackgroundSync extends HasLogging {
 		state.smoother.destroy();
 		state.subscribers.clear();
 		state.latestSnapshot = null;
+	}
+
+	get paused(): boolean {
+		return this.isPaused;
 	}
 
 	/**

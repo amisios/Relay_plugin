@@ -248,7 +248,8 @@ export class LoginManager extends Observable<LoginManager> {
 			return;
 		}
 
-		this.pb = new PocketBase(this.endpointManager.getAuthUrl(), this.authStore);
+		// Concurrent consumers must not cancel one another when the transport honors signals.
+		this.pb = new PocketBase(this.endpointManager.getAuthUrl(), this.authStore).autoCancellation(false);
 		this.pb.beforeSend = (url, options) => {
 			pbLog(url, options);
 			if (!this.pb.authStore.isValid && this.user) {
@@ -482,7 +483,7 @@ export class LoginManager extends Observable<LoginManager> {
 
 			// Recreate PocketBase instance with new auth URL
 			const pbLog = curryLog("[Pocketbase]", "debug");
-			this.pb = new PocketBase(this.endpointManager.getAuthUrl(), this.authStore);
+			this.pb = new PocketBase(this.endpointManager.getAuthUrl(), this.authStore).autoCancellation(false);
 			this.pb.beforeSend = (url, options) => {
 				pbLog(url, options);
 				if (!this.pb.authStore.isValid && this.user) {
