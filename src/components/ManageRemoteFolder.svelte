@@ -482,6 +482,21 @@
 	</SettingGroup>
 {/if}
 
+{#if $relayStore}
+	<SettingItemHeading
+		name="Users with access"
+		helpText="Everyone who can open this folder. Access comes from entering the folder secret, or from being an admin — admins are shown as Owner and can see every folder. Membership is managed by the relay operator."
+	></SettingItemHeading>
+
+	<SettingGroup>
+		{#each $virtualFolderRoles as role}
+			<AccountSettingItem user={role.user}>
+				<span class="role-label">{role.role}</span>
+			</AccountSettingItem>
+		{/each}
+	</SettingGroup>
+{/if}
+
 <div class="spacer"></div>
 
 {#if $folderStore && $syncSettings && $relayStore}
@@ -607,6 +622,10 @@
 <style>
 	div.spacer {
 		height: 3em;
+	}
+
+	.role-label {
+		color: var(--text-muted);
 	}
 
 	.local-settings {

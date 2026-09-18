@@ -583,21 +583,6 @@
 	{/if}
 {/if}
 
-{#if $canRenameRelay}
-	<SettingItem name="Name" description="Set the Relay Server's name.">
-		<input
-			type="text"
-			spellcheck="false"
-			placeholder="Example: Shared Notes"
-			bind:value={relay.name}
-			bind:this={nameInput}
-			on:input={handleNameChange}
-			class={($updating ? "system3-updating" : "") +
-				($nameValid ? "" : " system3-input-invalid")}
-		/>
-	</SettingItem>
-{/if}
-
 <SettingItemHeading name="Shared Folders on this Relay Server">
 	{#if $canManageUsers && $shouldShowToggle}
 		<button
@@ -903,30 +888,6 @@
 			>
 				Leave
 			</button>
-		</SettingItem>
-	</SettingGroup>
-{/if}
-
-{#if $canDeleteRelay}
-	<SettingItemHeading name="Danger zone"></SettingItemHeading>
-	<SettingGroup>
-		<SettingItem
-			name="Destroy Relay Server"
-			description="This will destroy the Relay Server (deleting all data on the server). Local data is preserved."
-		>
-			{#if $subscriptions.values().length > 0 && !$subscriptions.values()[0].cancelAt}
-				<button
-					disabled={true}
-					class="mod-warning"
-					aria-label="Cancel subscription to destroy Relay Server."
-				>
-					Destroy
-				</button>
-			{:else}
-				<button class="mod-warning" on:click={debounce(handleDestroy)}>
-					Destroy
-				</button>
-			{/if}
 		</SettingItem>
 	</SettingGroup>
 {/if}
