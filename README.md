@@ -71,32 +71,13 @@ It now syncs. Repeat with another secret for each additional folder.
   haven't unlocked is both invisible and unreachable.
 - If your access is revoked, it stops working within ~10 minutes (the token lifetime).
 
-**Security note, honestly stated:** identity here is *self-declared* — the plugin simply tells the
+**Security note:** identity here is *self-declared* — the plugin simply tells the
 server who you are. Access is gated by knowing a folder secret, which is strong against outsiders
 and accidents, but this is designed for a **small trusted group on a private network**, not for
-mutually-distrusting users on the open internet.
+mutually-distrusting users on the open internet. Do not use a public relay server. Use at your own risk.
 
 ---
 
-## For the admin (server side)
-
-The backend is the companion `relay-selfhost` stack (relay server + control-plane, via Docker).
-Manage folders and membership with:
-
-```bash
-docker exec relay_control_plane node src/index.js admin list
-docker exec relay_control_plane node src/index.js admin folder add "Notes"      # prints a secret
-docker exec relay_control_plane node src/index.js admin folder set-secret Notes # rotate it
-docker exec relay_control_plane node src/index.js admin grant  <userId> Notes   # no secret needed
-docker exec relay_control_plane node src/index.js admin revoke <userId> Notes
-docker exec relay_control_plane node src/index.js admin kick   <userId>         # all folders
-docker exec relay_control_plane node src/index.js admin add    <userId>         # make admin
-```
-
-Changes apply immediately — no restart. Find a user's id in the control-plane logs
-(`docker logs relay_control_plane | grep 'user='`).
-
----
 
 ## Building from source
 
