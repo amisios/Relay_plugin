@@ -27,6 +27,8 @@
 	import { join } from "path-browserify";
 
 	export let plugin: Live;
+	import { CustomRelay } from "../local/custom"; // [custom]
+	const customMode = CustomRelay.for(plugin).isCustom; // [custom]
 	export let relays: ObservableMap<string, Relay>;
 	export let subscriptions: ObservableMap<string, RelaySubscription>;
 
@@ -192,6 +194,7 @@
 	}
 </script>
 
+{#if !customMode}<!-- [custom] relays are joined through the control-plane -->
 <SettingItemHeading name="Join a Relay Server"></SettingItemHeading>
 <SettingGroup>
 	<SettingItem
@@ -219,6 +222,7 @@
 		</button>
 	</SettingItem>
 </SettingGroup>
+{/if}
 
 <SettingItemHeading
 	helpText="A Relay Server coordinates real-time updates between collaborators. You can add collaborators and share folders on the Relay Server's settings page."
@@ -245,6 +249,7 @@
 			></SettingsControl>
 		</SlimSettingItem>
 	{/each}
+	{#if !customMode}<!-- [custom] -->
 	<SlimSettingItem description="" name="">
 		<button
 			class="mod-cta system3-button"
@@ -253,6 +258,7 @@
 			Create
 		</button>
 	</SlimSettingItem>
+	{/if}
 </SettingGroup>
 
 <SettingItemHeading

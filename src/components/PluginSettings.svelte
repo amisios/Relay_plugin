@@ -13,6 +13,7 @@
 	import { handleServerError } from "../utils/toastStore";
 	import { Platform } from "obsidian";
 	import Announcement from "./Announcement.svelte";
+	import SelfHostSettings from "./SelfHostSettings.svelte"; // [custom]
 
 	interface RelayEventDetail {
 		relay: Relay;
@@ -304,6 +305,7 @@
 			on:manageRemoteFolder={handleManageRemoteFolderEvent}
 		></ManageRelay>
 	{:else}
+		<SelfHostSettings {plugin} /><!-- [custom] server toggle + self-hosted setup -->
 		<LoggedIn {plugin}>
 			<Relays
 				{relays}

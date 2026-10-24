@@ -25,6 +25,8 @@
 	import { FeatureFlagManager, flags } from "src/flagManager";
 
 	export let plugin: Live;
+	import { CustomRelay } from "../local/custom"; // [custom]
+	const customMode = CustomRelay.for(plugin).isCustom; // [custom]
 
 	let errorLog = curryLog("LoggedIn.svelte", "error");
 
@@ -308,7 +310,7 @@
 {#if $lm.hasUser && $lm.user}
 	<SettingItemHeading>
 		<RelayText slot="name" />
-		<GetInTouch />
+		{#if !customMode}<GetInTouch />{/if}<!-- [custom] -->
 	</SettingItemHeading>
 	<SettingItemHeading name="Account"></SettingItemHeading>
 	<AccountSettingItem user={$lm.user}>
