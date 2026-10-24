@@ -1,0 +1,5 @@
+{
+	"description": "Custom Relay flavor — the production build, rebranded into dist/",
+	"run": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production dist && node custom/build/finalize.mjs dist",
+	"default": true
+}
