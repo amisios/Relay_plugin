@@ -39,6 +39,8 @@
 	let viewAsAdmin = writable(false);
 	let hintDismissed = writable(false);
 	export let plugin!: Live;
+	import { CustomRelay } from "../local/custom"; // [custom]
+	const customMode = CustomRelay.for(plugin).isCustom; // [custom]
 	let loadingRelayConfig = false;
 	let relayConfigError: string | null = null;
 	let relayConfigToml = "";
@@ -753,6 +755,7 @@
 		</button>
 	</SettingItem>
     -->
+{#if !customMode}<!-- [custom] membership comes from folder secrets -->
 <SettingItemHeading
 	name="Sharing"
 	helpText="Share keys can be shared with collaborators so that they can join the Relay Server. Once you have added all of your collaborators, you can disable the share key to prevent anyone from joining, even if they have the key."
@@ -842,6 +845,7 @@
 		{/if}
 	{/if}
 </SettingGroup>
+{/if}
 {#if $canManageSubscription}
 	<SettingItemHeading name="Plan" />
 	<SettingGroup>

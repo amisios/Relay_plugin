@@ -105,6 +105,7 @@ import {
 	TextViewRegistry,
 	type PluginRegistrationSettings,
 } from "./TextViewRegistry";
+import { CustomRelay } from "./local/custom"; // [custom]
 
 type SettingsController = {
 	open(): void | Promise<void>;
@@ -593,6 +594,8 @@ export default class Live extends Plugin {
 		await this.settings.load();
 
 		const settingsTree = this.settings as unknown as SettingsTree;
+		// [custom] backend mode; swaps in that mode's shared folders before they load
+		const custom = await CustomRelay.init(this, settingsTree);
 		this.featureSettings = new NamespacedSettings(settingsTree, "(enable*)");
 		this.debugSettings = new NamespacedSettings(settingsTree, "(debugging)");
 		this.folderSettings = new NamespacedSettings(settingsTree, "sharedFolders");
@@ -807,7 +810,12 @@ export default class Live extends Plugin {
 
 		// Initialize and validate endpoints before creating LoginManager
 		const endpointManager = new EndpointManager(this.endpointSettings);
-		await this.validateEndpointsOnStartup(endpointManager);
+		// [custom] bug reports upload logs to System 3; never from this fork
+		this.removeCommand("send-bug-report");
+		// [custom] custom mode talks to the self-hosted control-plane instead
+		if (!custom.configureEndpoints(endpointManager)) {
+			await this.validateEndpointsOnStartup(endpointManager);
+		}
 
 		this.loginManager = new LoginManager(
 			this.vault.getName(),
@@ -816,8 +824,10 @@ export default class Live extends Plugin {
 			this.patchWebviewer.bind(this),
 			this.loginSettings,
 			endpointManager,
+			custom.selfHost, // [custom]
 		);
 		this.relayManager = new RelayManager(this.loginManager);
+		custom.restrictPermissions(this.relayManager); // [custom]
 		this.relayDebugAPI = new RelayDebugAPI(this);
 		this.deviceManager = new DeviceManager(
 			this.appId,
@@ -889,7 +899,10 @@ export default class Live extends Plugin {
 			tokenRefreshJitterSeed,
 		);
 
-		this.networkStatus = new NetworkStatus(this.timeProvider, HEALTH_URL);
+		this.networkStatus = new NetworkStatus(
+			this.timeProvider,
+			custom.healthUrl(HEALTH_URL), // [custom]
+		);
 
 		this.backgroundSync = new BackgroundSync(
 			this.loginManager,

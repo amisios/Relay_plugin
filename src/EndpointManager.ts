@@ -189,6 +189,21 @@ export class EndpointManager {
 	}
 
 	/**
+	 * [custom] Custom Relay: point API + AUTH at a self-hosted control-plane,
+	 * bypassing the signed-license validation (which only applies to
+	 * upstream-issued enterprise tenants). No HTTPS enforcement, so http:// on a
+	 * private VPN is allowed.
+	 */
+	setCustomEndpoints(apiUrl: string, authUrl: string): void {
+		this._validatedApiUrl = apiUrl.replace(/\/+$/, "");
+		this._validatedAuthUrl = authUrl.replace(/\/+$/, "");
+		this.log("Using custom (self-hosted) endpoints", {
+			apiUrl: this._validatedApiUrl,
+			authUrl: this._validatedAuthUrl,
+		});
+	}
+
+	/**
 	 * Get the current API URL - either validated custom URL or default
 	 */
 	getApiUrl(): string {
