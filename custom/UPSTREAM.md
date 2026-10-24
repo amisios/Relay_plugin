@@ -58,13 +58,17 @@ cannot run here. The fork's tests use their own config for that reason.
 
 ## Versions
 
-- `x.y.z` is always the upstream release this build is based on. It comes from upstream's
-  `manifest.json`.
-- `revision` in the overlay is the fork-only revision. The version becomes `x.y.z-<revision>`.
-- The control-plane (the server repo) uses the same `x.y.z` with its own `-N`. **Same x.y.z means
-  compatible.** The settings page checks this against the server's `/health`.
-- BRAT orders releases by semver, and there `x.y.z-N` sorts *below* `x.y.z`. Once you ship any
-  `-N` for an `x.y.z`, don't ship the bare `x.y.z` after it, or BRAT users won't move.
+- The plugin's version is the upstream release it is built on (`x.y.z`, from upstream's
+  `manifest.json`). Fork changes ship with the next upstream release; leave `revision` in the
+  overlay empty.
+- The control-plane (the server repo) uses the same `x.y.z`. **Same x.y.z means compatible.** The
+  settings page checks this against the server's `/health`. A control-plane-only fix may add
+  `-N` there, since the server isn't installed through BRAT.
+- Why plugin fixes can't ship as `x.y.z-N` or `x.y.z.N`: BRAT compares versions with semver.
+  It reads `0.8.12.1` as `0.8.12`, and it treats `0.8.12-1` as *older* than `0.8.12`, so it
+  would never offer either one. `revision` stays available as a last resort: setting it to `1`
+  builds `x.y.z-1`. Only use it with every later release for that `x.y.z` carrying a higher `-N`,
+  and after deleting the bare `x.y.z` release.
 
 ## Git layout
 
@@ -86,7 +90,7 @@ git merge upstream/<tag>                    # conflicts, if any, are in [custom]
 ```
 
 1. Resolve conflicts by keeping upstream's code and re-applying the small `[custom]` hook.
-2. Reset `revision` in `custom/manifest.overlay.json` for the new base version.
+2. Make sure `revision` in `custom/manifest.overlay.json` is empty.
 3. Check whether the control-plane needs changes:
    `scripts/contract-diff.sh <old-tag> <new-tag>` in the server repo lists upstream changes in the code
    the control-plane imitates. Adapt the control-plane if needed, then give it the same `x.y.z`.
