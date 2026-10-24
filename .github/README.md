@@ -81,11 +81,11 @@ and behaves like upstream Relay: sign in, join with share keys, create Relay Ser
 
 ## Versions and compatibility
 
-Custom Relay follows upstream Relay's version numbers. Version `x.y.z-N` is upstream Relay `x.y.z`
-plus fork revision `N`. The self-hosted server uses the same scheme:
+Custom Relay carries the version of the upstream Relay release it is built on: Custom Relay
+0.8.12 is upstream Relay 0.8.12 plus this fork's changes. The self-hosted server uses the same
+numbers:
 
-> **Plugin and server work together when they share the same `x.y.z`.** The `-N` revisions are
-> independent.
+> **Plugin and server work together when they share the same `x.y.z`.**
 
 Settings → Custom Relay shows the server's version, with a ✓ when it matches.
 
