@@ -1,0 +1,9 @@
+{
+	"id": "relay-custom",
+	"name": "Custom Relay",
+	"author": "Custom Relay",
+	"authorUrl": "",
+	"fundingUrl": null,
+	"repository": "amisios/Relay_plugin",
+	"revision": ""
+}
