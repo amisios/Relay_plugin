@@ -1,0 +1,17 @@
+name: relay-plugin-build
+
+# Build Custom Relay into ../dist/{main.js,manifest.json,styles.css}:
+#
+#   cd Relay_plugin/build
+#   docker compose run --rm build
+#
+# Then install them into a vault with ./install.sh <vault>, which copies them to
+#   <vault>/.obsidian/plugins/relay-custom/
+
+services:
+  build:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    volumes:
+      - ../dist:/out
