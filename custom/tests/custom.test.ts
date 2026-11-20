@@ -5,6 +5,8 @@ import type { EndpointManager } from "../../src/EndpointManager";
 import type { RelayManager } from "../../src/RelayManager";
 import type { Permission } from "../../src/Relay";
 import { CustomRelay, type SelfHostSettings } from "../../src/local/custom";
+import { makeIdentityToken } from "../../src/local/FakePocketBase";
+import { SyncSettingsManager } from "../../src/SyncSettings";
 
 type Data = Record<string, unknown>;
 
@@ -149,5 +151,74 @@ describe("restrictPermissions", () => {
 		const relayManager = { can: jest.fn(allow) };
 		custom.restrictPermissions(relayManager as unknown as RelayManager);
 		expect(check(relayManager, ["relay", "rename"])).toBe(true);
+	});
+});
+
+describe("identity key", () => {
+	test("custom mode creates a per-user key once and keeps it", async () => {
+		const first = await init({ selfHost: { controlPlaneUrl: "http://cp:8094" } });
+		const key = first.saved.selfHost.userKey as string;
+		expect(key).toMatch(/^[A-Za-z0-9_-]{43}$/);
+		expect(first.custom.selfHost?.userKey).toBe(key);
+
+		const again = await init(first.saved as unknown as Data);
+		expect(again.saved.selfHost.userKey).toBe(key);
+		expect(again.saved.selfHost.userId).toBe(first.saved.selfHost.userId);
+	});
+
+	test("an upgrade from 0.3.0 keeps the user id and adds a key", async () => {
+		const { saved } = await init({
+			sharedFolders: [A],
+			selfHost: { controlPlaneUrl: "http://cp:8094", userId: "legacy-id", displayName: "Ann" },
+		});
+		expect(saved.selfHost.userId).toBe("legacy-id");
+		expect(saved.selfHost.userKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
+	});
+
+	test("official mode creates no key", async () => {
+		const { saved } = await init({ selfHost: { mode: "official" } });
+		expect(saved.selfHost.userKey).toBeUndefined();
+	});
+
+	test("the identity token carries the key for the control-plane", () => {
+		const token = makeIdentityToken({ id: "u1", name: "Ann", key: "k".repeat(43) });
+		const [, payload, signature] = token.split(".");
+		expect(signature).toBe("");
+		const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+		expect(json).toMatchObject({ id: "u1", name: "Ann", key: "k".repeat(43) });
+		const legacy = makeIdentityToken({ id: "u1", name: "Ann" });
+		expect(JSON.parse(Buffer.from(legacy.split(".")[1], "base64url").toString("utf8")).key).toBeUndefined();
+	});
+});
+
+describe("every file type is shared by default (custom mode)", () => {
+	const syncOff = { images: true, pdfs: true, otherTypes: false };
+	const folder = (sync?: Record<string, boolean>) => ({ ...A, ...(sync ? { sync } : {}) });
+
+	test("existing folders get 'Other files' turned on once", async () => {
+		const { saved } = await init({ sharedFolders: [folder(syncOff), folder()] });
+		const [withSync, withoutSync] = saved.sharedFolders as { sync?: Record<string, boolean> }[];
+		expect(withSync.sync).toEqual({ images: true, pdfs: true, otherTypes: true });
+		expect(withoutSync.sync).toBeUndefined();
+		expect(saved.selfHost.allTypesDefaultApplied).toBe(true);
+		expect(SyncSettingsManager.defaultFlags.otherTypes).toBe(true);
+	});
+
+	test("a later choice to turn it off is respected", async () => {
+		const { saved } = await init({
+			sharedFolders: [folder(syncOff)],
+			selfHost: { userId: "u1", allTypesDefaultApplied: true },
+		});
+		expect((saved.sharedFolders[0] as { sync: Record<string, boolean> }).sync.otherTypes).toBe(false);
+	});
+
+	test("official mode keeps upstream's defaults", async () => {
+		const { saved } = await init({
+			sharedFolders: [folder(syncOff)],
+			selfHost: { mode: "official", foldersMode: "official" },
+		});
+		expect((saved.sharedFolders[0] as { sync: Record<string, boolean> }).sync.otherTypes).toBe(false);
+		expect(SyncSettingsManager.defaultFlags.otherTypes).toBe(false);
+		expect(saved.selfHost.allTypesDefaultApplied).toBeUndefined();
 	});
 });

@@ -17,8 +17,13 @@ git diff upstream/<tag> --stat                       # the whole footprint vs. u
 
 | Path | What it is |
 |---|---|
-| `src/local/custom.ts` | `CustomRelay`: backend mode, per-mode folder lists, endpoints, permission limits |
-| `src/local/FakePocketBase.ts` | Stands in for PocketBase in self-hosted mode; serves the control-plane's `/registry` |
+| `src/local/custom.ts` | `CustomRelay`: backend mode, per-mode folder lists, endpoints, permission limits, identity key, "every file type" default |
+| `src/local/FakePocketBase.ts` | Stands in for PocketBase in self-hosted mode; serves the control-plane's `/registry`; builds the identity token (id + key) |
+| `src/local/safety.ts` | `FolderSafety`: shared folders follow parent renames; vanished folders are paused, not deleted for everyone; review command |
+| `src/local/outboundGuard.ts` | Wraps each folder's `deleteFiles` / `renameFile` / `syncFileTree`: local removals settle for ~2 s; mass removals need confirmation |
+| `src/local/inboundGuard.ts` | Collaborators' removals: mass ones held (persisted); others moved to `.trash/relay/<folder>/<stamp>/…` |
+| `src/local/removalBackup.ts`, `SafetyModal.ts` | Structure-keeping backup writer; the review dialog |
+| `src/local/safetyPaths.ts`, `safetyPolicy.ts` | Pure path math and the 10-files-or-25% policy (unit-tested) |
 | `src/local/colors.ts` | Deterministic / chosen cursor colors |
 | `src/components/SelfHostSettings.svelte` | Top of settings: server toggle, self-hosted setup, version check, add folder by secret |
 | `custom/manifest.overlay.json` | Plugin id, name, author, update repository, fork revision |
@@ -36,6 +41,18 @@ git diff upstream/<tag> --stat                       # the whole footprint vs. u
 - points the in-plugin updater at this repository (`REPOSITORY` and two exact rewrites in
   `UpdateManager.ts`).
 - sets `GIT_TAG`, the version the plugin reports, to `<upstream version>[-<revision>]`.
+
+### Hooks that need care on upstream merges
+
+| Upstream file | Hook | What to check when upstream changes it |
+|---|---|---|
+| `src/main.ts` | `FolderSafety.init` after `CustomRelay.init`; first line of the `vault.on("rename")` handler; `onRootDeleted` in `flushVaultDeletes`'s root loop; `_createSharedFolder` returns `FolderSafety.for(this).attach(folder)` | The delete batching and rename handler still have the same shape |
+| `src/SharedFolder.ts` | `cleanupExtraLocalFiles`: `beginInboundRemoval(…)` / `if (removal.held) return [];` / `removal.trash(file)` instead of `trashLocal`; `isNovelPath` also asks `isHeldRemoval` | `inboundGuard.ts` mirrors the removal filters (`isSyncableTFile`, `remotePaths`, `pendingUpload`, `pendingCreates`, `_provider/_persistence.synced`). If those change, update it. |
+| `src/LoginManager.ts` | passes `key: selfHost.userKey` to `FakePocketBase` | — |
+
+`FolderSafety.attach` checks that each `SharedFolder` still has the members the guards wrap
+(`REQUIRED_MEMBERS` in `safety.ts`). If upstream renames one, the guards switch themselves off
+and log a warning instead of breaking sync.
 
 If upstream changes the code an exact rewrite targets, the build fails and names the file; adjust
 `custom/build/esbuild-plugin.mjs`. Upstream's `relay-plugin-api.d.ts` still names the

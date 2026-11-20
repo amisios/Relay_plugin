@@ -15,6 +15,7 @@ import type { EndpointManager } from "../EndpointManager";
 import type { RelayManager } from "../RelayManager";
 import { ObservablePermission } from "../PolicyManager";
 import type { Permission } from "../Relay";
+import { SyncSettingsManager } from "../SyncSettings";
 import type { SelfHostConfig } from "./FakePocketBase";
 
 declare const GIT_TAG: string;
@@ -29,6 +30,14 @@ export interface SelfHostSettings {
 	icon?: string;
 	color?: string;
 	userId?: string;
+	/**
+	 * Secret sent with `userId` to the control-plane only (0.8.12+). The
+	 * control-plane binds it to the id on first use, so knowing someone's id
+	 * (visible to collaborators) is not enough to act as them.
+	 */
+	userKey?: string;
+	/** Set once "sync every file type" has been applied to existing folders. */
+	allTypesDefaultApplied?: boolean;
 	/** Which mode the active `sharedFolders` list belongs to. */
 	foldersMode?: BackendMode;
 	/** The other mode's `sharedFolders` list, parked while it is inactive. */
@@ -56,6 +65,29 @@ const ADMIN_PERMISSIONS = new Set([
 
 const instances = new WeakMap<Plugin, CustomRelay>();
 
+/** 32 random bytes, base64url: the per-user identity key. */
+export function newUserKey(): string {
+	const bytes = new Uint8Array(32);
+	crypto.getRandomValues(bytes);
+	let binary = "";
+	for (const b of bytes) binary += String.fromCharCode(b);
+	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Turn on every sync type ("Other files" included) in stored folder settings.
+ * Self-hosted storage is unlimited, so everything in a shared folder is shared.
+ */
+export function enableAllTypes(folders: unknown): unknown {
+	if (!Array.isArray(folders)) return folders;
+	return folders.map((entry) => {
+		if (!entry || typeof entry !== "object") return entry;
+		const folder = entry as { sync?: Record<string, unknown> };
+		if (!folder.sync || typeof folder.sync !== "object") return entry;
+		return { ...folder, sync: { ...folder.sync, otherTypes: true } };
+	});
+}
+
 export class CustomRelay {
 	private constructor(
 		private readonly plugin: Plugin,
@@ -75,8 +107,12 @@ export class CustomRelay {
 		const mode: BackendMode = stored.mode === "official" ? "official" : "custom";
 		const foldersMode = stored.foldersMode ?? mode;
 		const needsUserId = mode === "custom" && !stored.userId;
+		const needsUserKey = mode === "custom" && !stored.userKey;
+		// One-time: existing folders were created with "Other files" off.
+		// Afterwards the user's own toggles are left alone.
+		const needsAllTypes = mode === "custom" && !stored.allTypesDefaultApplied;
 
-		if (stored.foldersMode !== mode || needsUserId) {
+		if (stored.foldersMode !== mode || needsUserId || needsUserKey || needsAllTypes) {
 			await settingsTree.update((current) => {
 				const selfHost = { ...((current.selfHost ?? {}) as SelfHostSettings) };
 				let sharedFolders = current.sharedFolders;
@@ -89,9 +125,18 @@ export class CustomRelay {
 				}
 				selfHost.foldersMode = mode;
 				if (needsUserId) selfHost.userId = uuidv4();
+				if (needsUserKey) selfHost.userKey = newUserKey();
+				if (needsAllTypes) {
+					sharedFolders = enableAllTypes(sharedFolders);
+					selfHost.allTypesDefaultApplied = true;
+				}
 				return { ...current, sharedFolders, selfHost };
 			});
 		}
+
+		// Folders shared from now on sync every file type in self-hosted mode;
+		// official mode keeps upstream's default (other files cost quota there).
+		SyncSettingsManager.defaultFlags.otherTypes = mode === "custom";
 
 		const settings = new NamespacedSettings<SelfHostSettings>(settingsTree, "selfHost");
 		plugin.register(() => settings.destroy());
@@ -104,6 +149,7 @@ export class CustomRelay {
 						icon: s.icon,
 						color: s.color,
 						userId: s.userId as string,
+						userKey: s.userKey,
 					}
 				: undefined;
 

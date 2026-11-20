@@ -22,12 +22,16 @@ export interface SelfHostConfig {
 	color?: string;
 	/** Stable, self-declared user id (generated once, persisted). */
 	userId: string;
+	/** Secret bound to `userId` by the control-plane on first use (0.8.12+). */
+	userKey?: string;
 }
 
 interface Identity {
 	id: string;
 	name: string;
 	email?: string;
+	/** Per-user secret; only ever sent to the control-plane. */
+	key?: string;
 }
 
 interface FakeRecord {
@@ -49,8 +53,10 @@ function base64UrlEncode(input: string): string {
 /**
  * Build the identity token the plugin sends as a Bearer to the control-plane.
  * Shaped like a JWT (`header.payload.`) so LoginManager's JWT-decoding refresh
- * path and the control-plane both read the payload the same way. Unsigned — the
- * control-plane trusts it (trusted VPN group); it is never verified.
+ * path and the control-plane both read the payload the same way. Unsigned: the
+ * proof of identity is `key`, a per-user secret the control-plane binds to the
+ * id on first use. This token goes only to the control-plane — never to the
+ * relay server, into awareness, or through the public API.
  */
 export function makeIdentityToken(user: Identity): string {
 	const header = base64UrlEncode(JSON.stringify({ alg: "none", typ: "JWT" }));
@@ -61,6 +67,7 @@ export function makeIdentityToken(user: Identity): string {
 			name: user.name,
 			email: user.email ?? "",
 			exp,
+			...(user.key ? { key: user.key } : {}),
 		}),
 	);
 	return `${header}.${payload}.`;

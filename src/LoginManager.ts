@@ -226,6 +226,7 @@ export class LoginManager extends Observable<LoginManager> {
 			const fake = new FakePocketBase(selfHost.controlPlaneUrl, {
 				id: selfHost.userId,
 				name: selfHost.displayName,
+				key: selfHost.userKey,
 			});
 			this.pb = fake as unknown as PocketBase;
 			this.user = new User(

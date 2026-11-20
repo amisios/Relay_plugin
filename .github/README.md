@@ -14,8 +14,12 @@ plugin without conflicting.
 
 - ✍️ **Live collaborative editing** with other people's cursors
 - 📁 **Multiple shared folders** on one relay, each protected by its own **folder secret**
+- 📎 **Every file type shared** — notes and canvases live, everything else (images, PDFs, encrypted
+  files, …) as whole files, up to 250 MiB each
 - 🔒 **You control access** — the server only hands out tokens to folder members
-- 🧩 **Self-declared identity** — pick a display name and colour, no OAuth
+- 🧩 **No accounts** — pick a display name and colour; a per-device secret key proves it's you
+- 🛟 **Safe renames and deletes** — renaming a parent folder keeps the share; mass removals need
+  confirmation, and collaborators' removed files are backed up
 
 > **Self-hosted mode requires a backend.** Someone must run the companion stack (relay server +
 > control-plane). Ask them for the details below.
@@ -100,10 +104,29 @@ Settings → Custom Relay shows the server's version, with a ✓ when it matches
   haven't unlocked is both invisible and unreachable.
 - If your access is revoked, it stops working within ~10 minutes (the token lifetime).
 
-**Security note:** identity here is *self-declared* — the plugin simply tells the
-server who you are. Access is gated by knowing a folder secret, which is strong against outsiders
-and accidents, but this is designed for a **small trusted group on a private network**, not for
-mutually-distrusting users on the open internet. Do not use a public relay server. Use at your own risk.
+- Your plugin makes up a user id and a **secret key** the first time it runs. The server binds the
+  key to the id, so knowing someone's id is not enough to act as them.
+
+**Security note:** there are no accounts. Access is gated by folder secrets and your device's key,
+which is strong against outsiders and accidents. This is designed for a **small trusted group on a
+private network** (VPN/LAN, plain `http`), not for the open internet. Use at your own risk.
+
+## Shared folder safety
+
+- **Renaming or moving a parent folder** of a shared folder keeps it shared; the share follows.
+- **If a shared folder disappears** from outside Obsidian (Finder, or another sync tool such as
+  Obsidian Sync, iCloud or Syncthing), Relay pauses it on that device and asks where it went.
+  Nothing is removed for collaborators.
+- **Removing 10 or more files at once, or a quarter of a folder,** asks first: *Restore them here*,
+  *Pause this folder*, or *Remove for everyone*. Nothing is sent until you choose.
+- **When a collaborator removes files,** your copies go to `.trash/relay/<folder>/<date-time>/` with
+  their sub-folders kept. If they removed a lot at once, your files stay until you choose *Keep my
+  copies* (shares them again) or *Apply*.
+- Command palette: **“Review held removals and paused folders.”**
+
+> **Don't also sync Relay-shared folders with another tool** (Obsidian Sync, iCloud, Syncthing, git)
+> on devices where Relay runs. Two sync engines fight over the same files. Exclude the shared
+> folders in the other tool, or run Relay on one device only.
 
 ---
 
@@ -130,10 +153,13 @@ In **self-hosted** mode:
 - **No collaborator cap.**
 - Folders are **admin-created** and gated by **folder secrets** (no folder creation from the UI).
 - Members are read-write; there's no read-only role yet.
+- **Every file type** syncs by default ("Other files" is on).
+- Each device has a **secret identity key** (no OAuth).
 
 In **both** modes:
 
 - Installs as `relay-custom` so it **coexists** with the official Relay plugin.
+- **Shared folder safety** (above): rename-following, mass-removal confirmation, structured backups.
 - The "Send bug report" command is removed; it uploads logs to System 3.
 - Updates come from this repository's releases, not upstream's.
 

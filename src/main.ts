@@ -106,6 +106,7 @@ import {
 	type PluginRegistrationSettings,
 } from "./TextViewRegistry";
 import { CustomRelay } from "./local/custom"; // [custom]
+import { FolderSafety } from "./local/safety"; // [custom]
 
 type SettingsController = {
 	open(): void | Promise<void>;
@@ -274,6 +275,8 @@ export default class Live extends Plugin {
 		}
 		const destroyedRoots = removedSharedRoots;
 		for (const { folder } of destroyedRoots) {
+			// [custom] a root that vanished from outside Obsidian is paused, not dropped
+			if (FolderSafety.for(this).onRootDeleted(folder)) continue;
 			this.sharedFolders.delete(folder);
 		}
 
@@ -596,6 +599,8 @@ export default class Live extends Plugin {
 		const settingsTree = this.settings as unknown as SettingsTree;
 		// [custom] backend mode; swaps in that mode's shared folders before they load
 		const custom = await CustomRelay.init(this, settingsTree);
+		// [custom] shared folders follow renames; mass removals need confirmation
+		FolderSafety.init(this, settingsTree);
 		this.featureSettings = new NamespacedSettings(settingsTree, "(enable*)");
 		this.debugSettings = new NamespacedSettings(settingsTree, "(debugging)");
 		this.folderSettings = new NamespacedSettings(settingsTree, "sharedFolders");
@@ -1202,7 +1207,7 @@ export default class Live extends Plugin {
 			authoritative,
 			remote,
 		);
-		return folder;
+		return FolderSafety.for(this).attach(folder); // [custom] removal guards
 	}
 
 	private _onLogout() {
@@ -1418,6 +1423,7 @@ export default class Live extends Plugin {
 
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
+				FolderSafety.for(this).beforeVaultRename(file, oldPath); // [custom] follow parent renames
 				// TODO this doesn't work for empty folders.
 				if (file instanceof TFolder) {
 					const sharedFolder = this.sharedFolders.find((folder) => {

@@ -92,6 +92,7 @@
 			const token = makeIdentityToken({
 				id: saved.userId,
 				name: saved.displayName || "Anonymous",
+				key: saved.userKey,
 			});
 			const res = await requestUrl({
 				url: `${configuredUrl}/join`,
@@ -112,9 +113,17 @@
 			} else if (res.status === 404) {
 				new Notice("That folder secret wasn't recognised.", 6000);
 			} else if (res.status === 401) {
+				let reason = "identity rejected";
+				try {
+					reason = (res.json as { error?: string } | undefined)?.error ?? reason;
+				} catch {
+					/* non-JSON body */
+				}
 				new Notice(
-					"The control-plane rejected your identity — save your settings first.",
-					8000,
+					`The control-plane rejected your identity (${reason}). ` +
+						`If you reinstalled or moved this vault, ask your admin to run ` +
+						`"admin user reset ${saved.userId}".`,
+					12000,
 				);
 			} else {
 				new Notice(`Could not add the folder (HTTP ${res.status}).`, 8000);
@@ -156,7 +165,13 @@
 	<div class="setting-item">
 		<div class="setting-item-info">
 			<div class="setting-item-name">Display name</div>
-			<div class="setting-item-description">Shown to collaborators (cursors).</div>
+			<div class="setting-item-description">
+				Shown to collaborators (cursors).
+				{#if current.userId}
+					<br />Your user id (for your admin):
+					<code class="relay-user-id">{current.userId}</code>
+				{/if}
+			</div>
 		</div>
 		<div class="setting-item-control">
 			<input type="text" placeholder="Your name" bind:value={displayName} />

@@ -37,6 +37,7 @@ import {
 import type { NamespacedSettings } from "./SettingsStorage";
 import { RelayInstances, metrics } from "./debug";
 import { LocalStorage } from "./LocalStorage";
+import { beginInboundRemoval, isHeldRemoval } from "./local/inboundGuard"; // [custom]
 import type { MergeHSM } from "./merge-hsm/MergeHSM";
 import { SyncFolder, isSyncFolder } from "./SyncFolder";
 import { isDocument } from "./Document";
@@ -2608,6 +2609,9 @@ export class SharedFolder extends HasProvider {
 	): Delete[] {
 		// Delete files that are no longer shared
 		const ffiles = this.getSyncFiles();
+		// [custom] back up remote removals with their folders; hold mass removals
+		const removal = beginInboundRemoval(this, ffiles, remotePaths);
+		if (removal.held) return [];
 		const deletes: Delete[] = [];
 		const folders = ffiles.filter((file) => file instanceof TFolder);
 		const files = ffiles.filter((file) => file instanceof TFile);
@@ -2624,8 +2628,8 @@ export class SharedFolder extends HasProvider {
 				if (synced) {
 					diffLog.push(`deleted local file ${vpath} for remotely deleted doc`);
 					this.markPendingDelete(vpath);
-					const promise = this.vault.adapter
-						.trashLocal(file.path)
+					const promise = removal // [custom] was this.vault.adapter.trashLocal(file.path)
+						.trash(file)
 						.then(() => {
 							// The pending-delete mark suppresses the trash's own
 							// vault-delete echo, so the deletion handler that
@@ -2701,7 +2705,8 @@ export class SharedFolder extends HasProvider {
 		return (
 			!this.syncStore.has(vpath) &&
 			!(this.bootSnapshot?.has(vpath) ?? false) &&
-			!this.serverOps.coversPath(vpath)
+			!this.serverOps.coversPath(vpath) &&
+			!isHeldRemoval(this, vpath) // [custom] a held remote removal is not a new file
 		);
 	}
 
